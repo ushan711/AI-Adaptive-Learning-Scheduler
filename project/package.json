@@ -1,0 +1,27 @@
+{
+  "name": "ai-adaptive-learning-scheduler",
+  "version": "1.0.0",
+  "description": "AI-powered adaptive learning scheduler for A/L students",
+  "scripts": {
+    "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "deploy": "firebase deploy",
+    "emulators": "firebase emulators:start",
+    "install-all": "npm install && cd frontend && npm install && cd ../backend/functions && npm install"
+  },
+  "keywords": [
+    "ai",
+    "learning",
+    "scheduler",
+    "education",
+    "firebase"
+  ],
+  "author": "AI Learning Team",
+  "license": "MIT",
+  "devDependencies": {
+    "firebase-tools": "^12.4.0"
+  },
+  "dependencies": {
+    "firebase": "^11.10.0"
+  }
+}
