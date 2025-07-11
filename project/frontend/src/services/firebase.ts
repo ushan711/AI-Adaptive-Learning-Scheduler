@@ -4,12 +4,12 @@ import { getFirestore } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBI1mx2FXsrgcBEwZNKgohW3m5La6CD2jU",
-  authDomain: "ai-adaptive-learning-scheduler.firebaseapp.com",
-  projectId: "ai-adaptive-learning-scheduler",
-  storageBucket: "ai-adaptive-learning-scheduler.appspot.com",
-  messagingSenderId: "752130632987",
-  appId: "1:752130632987:web:e8137aacbfc34a333437be"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 // Initialize Firebase
