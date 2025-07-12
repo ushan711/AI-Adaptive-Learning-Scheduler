@@ -52,7 +52,7 @@ export class AIEngine {
       }
 
       // Get historical data for training
-      const historicalData = await this.getHistoricalData(userData.userId);
+      const historicalData = await this.getHistoricalData(userData.uid);
       
       // Train model with historical data
       if (historicalData.length > 0) {
@@ -104,9 +104,33 @@ export class AIEngine {
   }
 
   private async getHistoricalData(userId: string) {
-    // In a real implementation, this would fetch historical session data
-    // and feedback from Firestore
-    return [];
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const sessionsQuery = await tf.app.admin.firestore().collection('sessions')
+        .where('userId', '==', userId)
+        .where('startTime', '>=', thirtyDaysAgo)
+        .get();
+
+    const feedbackQuery = await tf.app.admin.firestore().collection('feedback')
+        .where('userId', '==', userId)
+        .where('createdAt', '>=', thirtyDaysAgo)
+        .get();
+
+    const sessions = sessionsQuery.docs.map(doc => doc.data());
+    const feedback = feedbackQuery.docs.map(doc => doc.data());
+
+    // Combine session and feedback data for training
+    const historicalData = sessions.map(session => {
+        const sessionFeedback = feedback.find(f => f.sessionId === session.id);
+        return {
+            ...session,
+            ...sessionFeedback,
+            success: session.status === 'completed',
+        };
+    });
+
+    return historicalData;
   }
 
   private async trainModel(historicalData: any[]) {
@@ -117,7 +141,7 @@ export class AIEngine {
 
       // Prepare training data
       const features = historicalData.map(data => this.extractFeatures(data, {}));
-      const labels = historicalData.map(data => data.success ? 1 : 0);
+      const labels = historicalData.map(data => (data.success ? 1 : 0));
 
       const xs = tf.tensor2d(features);
       const ys = tf.tensor2d(labels, [labels.length, 1]);
@@ -127,7 +151,12 @@ export class AIEngine {
         epochs: 50,
         batchSize: 32,
         validationSplit: 0.2,
-        verbose: 0,
+        callbacks: {
+          onEpochEnd: (epoch, logs) => {
+            if (logs)
+              console.log(`Epoch ${epoch}: loss = ${logs.loss}, acc = ${logs.acc}`);
+          }
+        }
       });
 
       // Clean up tensors
