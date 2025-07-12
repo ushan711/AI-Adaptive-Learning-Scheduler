@@ -1,113 +1,80 @@
-import { useSchedule } from '@/hooks/useSchedule';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { analyticsAPI } from '@/services/api';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
 import { Pie, Bar } from 'react-chartjs-2';
+import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
-// Analytics: Page to view study progress analytics with charts
 const Analytics = () => {
-  const { currentSchedule } = useSchedule();
+  const { user } = useAuth();
+  const [stats, setStats] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const getStats = () => {
-    if (!currentSchedule?.sessions) return { pending: 0, completed: 0, missed: 0 };
-    return currentSchedule.sessions.reduce(
-      (acc, session) => {
-        const key = session.status.toLowerCase() as 'pending' | 'completed' | 'missed';
-        acc[key] = (acc[key] || 0) + 1;
-        return acc;
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!user) return;
+      try {
+        const progressStats = await analyticsAPI.getProgressStats(user.uid);
+        setStats(progressStats);
+      } catch (error) {
+        console.error("Failed to fetch analytics:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, [user]);
+
+  if (isLoading) {
+    return <LoadingSpinner text="Loading analytics..." />;
+  }
+
+  if (!stats) {
+    return <p>No analytics data available.</p>;
+  }
+
+  const pieData = {
+    labels: ['Completed', 'Missed', 'Pending'],
+    datasets: [{
+      data: [stats.completedSessions, stats.totalSessions - stats.completedSessions, 0], // Assuming no pending status from backend
+      backgroundColor: ['#10B981', '#EF4444', '#3B82F6'],
+      borderColor: '#FFFFFF',
+      borderWidth: 1,
+    }],
+  };
+
+  const barData = {
+    labels: stats.dailyProgress.map(d => new Date(d.date).toLocaleDateString()),
+    datasets: [
+      {
+        label: 'Completed',
+        data: stats.dailyProgress.map(d => d.completedSessions),
+        backgroundColor: '#10B981',
       },
-      { pending: 0, completed: 0, missed: 0 }
-    );
+      {
+        label: 'Total',
+        data: stats.dailyProgress.map(d => d.totalSessions),
+        backgroundColor: '#3B82F6',
+      },
+    ],
   };
-
-  const stats = getStats();
-
-  // Simulate daily breakdown for bar chart (replace with real data when backend is ready)
-  type SessionStats = { pending: number; completed: number; missed: number };
-  const getDailyStats = (): Record<string, SessionStats> => {
-    if (!currentSchedule?.sessions) return {};
-    const dailyStats: Record<string, SessionStats> = {};
-    currentSchedule.sessions.forEach(session => {
-      const date = new Date(session.startTime).toLocaleDateString();
-      dailyStats[date] = dailyStats[date] || { pending: 0, completed: 0, missed: 0 };
-      dailyStats[date][session.status.toLowerCase() as keyof SessionStats] += 1;
-    });
-    return dailyStats;
-  };
-
-  const dailyStats = getDailyStats();
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-4 text-gray-800">Study Analytics</h2>
       <p className="text-gray-600 mb-4">Track your progress with these insights.</p>
-          <div style={{ height: 300 }}>
-            <Pie
-              data={{
-                labels: ['Pending', 'Completed', 'Missed'],
-                datasets: [{
-                  data: [stats.pending, stats.completed, stats.missed],
-                  backgroundColor: ['#3B82F6', '#10B981', '#EF4444'],
-                  borderWidth: 1,
-                  borderColor: '#FFFFFF',
-                }],
-              }}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: { position: 'top' },
-                  title: { display: true, text: 'Session Status' },
-                },
-              }}
-            />
-          </div>
-        {/* Bar Chart for Daily Session Breakdown */}
-        <div>
-          <div style={{ height: 300 }}>
-            <Bar
-              data={{
-                labels: Object.keys(dailyStats),
-                datasets: [
-                  {
-                    label: 'Pending',
-                    data: Object.values(dailyStats).map(d => d.pending),
-                    backgroundColor: '#3B82F6',
-                    borderColor: '#3B82F6',
-                    borderWidth: 1,
-                  },
-                  {
-                    label: 'Completed',
-                    data: Object.values(dailyStats).map(d => d.completed),
-                    backgroundColor: '#10B981',
-                    borderColor: '#10B981',
-                    borderWidth: 1,
-                  },
-                  {
-                    label: 'Missed',
-                    data: Object.values(dailyStats).map(d => d.missed),
-                    backgroundColor: '#EF4444',
-                    borderColor: '#EF4444',
-                    borderWidth: 1,
-                  },
-                ],
-              }}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: { position: 'top' },
-                  title: { display: true, text: 'Sessions by Day' },
-                },
-                scales: {
-                  y: { beginAtZero: true, title: { display: true, text: 'Number of Sessions' } },
-                },
-              }}
-            />
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div style={{ height: 300 }}>
+          <Pie data={pieData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, title: { display: true, text: 'Session Status Breakdown' } } }} />
         </div>
-        {!currentSchedule && <p className="text-gray-500 mt-4">No data available yet. Generate a schedule to see analytics.</p>}
+        <div style={{ height: 300 }}>
+          <Bar data={barData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, title: { display: true, text: 'Daily Progress' } }, scales: { y: { beginAtZero: true } } }} />
+        </div>
       </div>
+    </div>
   );
 };
 
