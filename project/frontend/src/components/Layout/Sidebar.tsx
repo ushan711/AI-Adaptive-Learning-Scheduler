@@ -22,7 +22,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
     { name: 'Schedule', href: '/schedule', icon: Calendar },
-    { name: 'Subjects', href: '/subjects', icon: BookOpen },
+    // { name: 'Subjects', href: '/subjects', icon: BookOpen },
     { name: 'Analytics', href: '/analytics', icon: TrendingUp },
     { name: 'Feedback', href: '/feedback', icon: MessageCircle },
     { name: 'Achievements', href: '/achievements', icon: Award },

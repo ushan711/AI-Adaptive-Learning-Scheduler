@@ -1,7 +1,7 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-import * as express from 'express';
-import * as cors from 'cors';
+const express = require('express');
+const cors = require('cors'); // <-- just import, don't call here
 
 // Import routes
 import { scheduleRoutes } from './routes/schedule';
@@ -16,8 +16,19 @@ admin.initializeApp();
 const app = express();
 
 // Middleware
-app.use(cors({ origin: true }));
+app.use(cors({
+  origin: 'http://localhost:3000',
+  credentials: true
+}));
 app.use(express.json());
+
+app.options('*', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(200);
+});
 
 // Authentication middleware
 const authenticateUser = async (req: express.Request, res: express.Response, next: express.NextFunction) => {

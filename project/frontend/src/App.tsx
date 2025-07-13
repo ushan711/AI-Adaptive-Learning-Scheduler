@@ -4,12 +4,13 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '@/services/firebase';
 import Layout from '@/components/Layout/Layout';
 import LoadingSpinner from '@/components/Common/LoadingSpinner';
-import ScheduleGenerator from '@/pages/Dashboard/SchedulePage';
-import Subject from './pages/Dashboard/Subject';  
+// import ScheduleGenerator from '@/pages/Dashboard/SchedulePage';
+// import Subject from './pages/Dashboard/Subject';  
 import Analytics from './pages/Dashboard/Analytics';
 import Feedback from './pages/Dashboard/Feedback';
 import Achievements from './pages/Dashboard/Achievements';
 import Preferences from './pages/Dashboard/Preferences';
+import   MergedSchedule from '@/pages/Dashboard/MergedSchedule';
 // Auth Pages
 import Login from '@/pages/Auth/Login';
 import Register from '@/pages/Auth/Register';
@@ -53,9 +54,9 @@ const App: React.FC = () => {
         <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
-          <Route path="schedule" element={<ScheduleGenerator/>} />
+          <Route path="schedule" element={<MergedSchedule/>} />
           <Route path="preferences" element={<Preferences/>} />
-          <Route path="subjects" element={<Subject/>} />
+          {/* <Route path="subjects" element={<Subject/>} /> */}
           <Route path="analytics" element={<Analytics/>} />
           <Route path="feedback" element={<Feedback/>} />
           <Route path="achievements" element={<Achievements/>} />
