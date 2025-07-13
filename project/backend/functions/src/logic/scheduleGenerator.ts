@@ -5,7 +5,7 @@ export class ScheduleGenerator {
 
   async generateSchedule(userId: string, preferences: any, userData: any) {
     try {
-      // Get user's subjects
+      // 1. Get subjects
       const subjectsQuery = await this.db.collection('subjects')
         .where('userId', '==', userId)
         .orderBy('priority', 'desc')
@@ -20,13 +20,16 @@ export class ScheduleGenerator {
         throw new Error('No subjects found for user');
       }
 
-      // Generate time slots based on preferences
+      // 2. Create time slots
       const timeSlots = this.generateTimeSlots(preferences);
-      
-      // Allocate subjects to time slots
-      const sessions = this.allocateSubjectsToSlots(subjects, timeSlots, preferences);
+      if (timeSlots.length === 0) {
+        throw new Error('No available time slots generated');
+      }
 
-      // Create schedule object
+      // 3. Allocate subjects
+      const sessions = this.allocateSubjectsToSlots(subjects, timeSlots, userId);
+
+      // 4. Create final schedule object
       const schedule = {
         userId,
         date: new Date(),
@@ -44,30 +47,31 @@ export class ScheduleGenerator {
 
   private generateTimeSlots(preferences: any) {
     const slots = [];
-    const { availableTimeSlots, preferredStudyHours, breakDuration } = preferences;
+    const { availableTimeSlots = [], breakDuration = 15 } = preferences;
 
     for (const timeSlot of availableTimeSlots) {
-      if (timeSlot.isAvailable) {
-        const startTime = new Date(`2024-01-01T${timeSlot.startTime}:00`);
-        const endTime = new Date(`2024-01-01T${timeSlot.endTime}:00`);
-        
-        // Split into study sessions with breaks
-        let currentTime = startTime;
-        while (currentTime < endTime) {
-          const sessionEnd = new Date(currentTime.getTime() + (90 * 60 * 1000)); // 90 minutes
-          
-          if (sessionEnd <= endTime) {
-            slots.push({
-              startTime: new Date(currentTime),
-              endTime: sessionEnd,
-              duration: 90,
-            });
-            
-            // Add break
-            currentTime = new Date(sessionEnd.getTime() + (breakDuration * 60 * 1000));
-          } else {
-            break;
-          }
+      if (!timeSlot.isAvailable || !timeSlot.startTime || !timeSlot.endTime) continue;
+
+      const startTime = new Date(`1970-01-01T${timeSlot.startTime}:00`);
+      const endTime = new Date(`1970-01-01T${timeSlot.endTime}:00`);
+
+      if (isNaN(startTime.getTime()) || isNaN(endTime.getTime()) || startTime >= endTime) continue;
+
+      let currentTime = startTime;
+      while (currentTime < endTime) {
+        const sessionEnd = new Date(currentTime.getTime() + (90 * 60 * 1000)); // 90 mins
+
+        if (sessionEnd <= endTime) {
+          slots.push({
+            startTime: new Date(currentTime),
+            endTime: new Date(sessionEnd),
+            duration: 90,
+          });
+
+          // Add break
+          currentTime = new Date(sessionEnd.getTime() + (breakDuration * 60 * 1000));
+        } else {
+          break;
         }
       }
     }
@@ -75,21 +79,27 @@ export class ScheduleGenerator {
     return slots;
   }
 
-  private allocateSubjectsToSlots(subjects: any[], timeSlots: any[], preferences: any) {
+  private allocateSubjectsToSlots(subjects: any[], timeSlots: any[], userId: string) {
     const sessions = [];
     let slotIndex = 0;
 
     for (const subject of subjects) {
-      const sessionsNeeded = Math.ceil(subject.estimatedDuration / 90);
-      
+      const estimated = subject.estimatedDuration || 90; // fallback to 90 mins if not set
+      const sessionsNeeded = Math.ceil(estimated / 90);
+
       for (let i = 0; i < sessionsNeeded && slotIndex < timeSlots.length; i++) {
         const slot = timeSlots[slotIndex];
-        
+
         sessions.push({
-          id: `session_${Date.now()}_${slotIndex}`,
-          userId: subject.userId,
+          id: `session_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+          userId: userId,
           subjectId: subject.id,
-          subject: subject,
+          subject: {
+            name: subject.name,
+            priority: subject.priority,
+            difficulty: subject.difficulty,
+            color: subject.color,
+          },
           startTime: slot.startTime,
           endTime: slot.endTime,
           duration: slot.duration,
